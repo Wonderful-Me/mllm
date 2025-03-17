@@ -23,8 +23,9 @@ sudo apt-add-repository -y "deb https://apt.kitware.com/ubuntu/ $(lsb_release -c
 sudo apt update
 sudo apt install -y cmake
 
-# unzip installation
-sudo apt install unzip
+# package installation
+sudo apt install unzip -y
+sudo apt install python -y
 
 # QNN SDK
 wget https://dl.google.com/android/repository/android-ndk-r28-linux.zip
@@ -35,10 +36,14 @@ rm android-ndk-r28-linux.zip
 # qpm-cli --login yx102@rice.edu
 
 # # QNN SDK
+# # Path: ./mllm/src/backends/qnn/sdk/bin/envsetup.sh
 # qpm-cli --license-activate qualcomm_neural_processing_sdk
 # qpm-cli --extract qualcomm_neural_processing_sdk
-# mv /opt/qcom/aistack/qairt/2.31.0.250130
+# mv /opt/qcom/aistack/qairt/2.31.0.250130 ./mllm/src/backends/qnn/sdk
+# source ./mllm/src/backends/qnn/sdk/bin/envsetup.sh
 
 # # Hexagon SDK
+# # Path: /local/mnt/workspace/Qualcomm/Hexagon_SDK/5.5.3.0
 # qpm-cli --license-activate HexagonSDK5.x
 # qpm-cli --install HexagonSDK5.x -y
+# source /local/mnt/workspace/Qualcomm/Hexagon_SDK/5.5.3.0/setup_sdk_env.source
