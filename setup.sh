@@ -26,11 +26,13 @@ sudo apt install -y cmake
 # package installation
 sudo apt install unzip -y
 sudo apt install python -y
+sudo apt install libncurses5 -y 
 
 # QNN SDK
 wget https://dl.google.com/android/repository/android-ndk-r28-linux.zip
 unzip android-ndk-r28-linux.zip
 rm android-ndk-r28-linux.zip
+export ANDROID_NDK_ROOT="/home/cc/workspace/android-ndk-r28"
 
 # # Install QPM3 from https://qpm.qualcomm.com/#/main/tools/details/QPM3
 # qpm-cli --login yx102@rice.edu

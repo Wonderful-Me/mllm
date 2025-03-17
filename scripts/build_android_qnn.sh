@@ -2,6 +2,8 @@
 mkdir ../build-arm-qnn
 cd ../build-arm-qnn || exit
 
+export ANDROID_NDK="/home/cc/workspace/android-ndk-r28"
+
 cmake .. \
 -DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
 -DCMAKE_BUILD_TYPE=Release \
