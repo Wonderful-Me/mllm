@@ -1,0 +1,44 @@
+git config --global user.email "642741043@qq.com"
+git config --global user.name "Wonderful-Me"
+
+# init mllm repo
+# git clone git@github.com:Wonderful-Me/mllm.git
+# cd mllm
+# git submodule update --init --recursive
+# cd ..
+
+# gcc-13 update
+sudo add-apt-repository ppa:ubuntu-toolchain-r/test -y
+sudo apt update
+sudo apt install gcc-13 g++-13 -y
+sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-13 100
+sudo update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-13 100
+
+# cmake update
+sudo apt update
+sudo apt remove cmake  # remove old version first
+sudo apt install -y software-properties-common
+sudo apt-key adv --fetch-keys "https://apt.kitware.com/keys/kitware-archive-latest.asc"
+sudo apt-add-repository -y "deb https://apt.kitware.com/ubuntu/ $(lsb_release -cs) main"
+sudo apt update
+sudo apt install -y cmake
+
+# unzip installation
+sudo apt install unzip
+
+# QNN SDK
+wget https://dl.google.com/android/repository/android-ndk-r28-linux.zip
+unzip android-ndk-r28-linux.zip
+rm android-ndk-r28-linux.zip
+
+# # Install QPM3 from https://qpm.qualcomm.com/#/main/tools/details/QPM3
+# qpm-cli --login yx102@rice.edu
+
+# # QNN SDK
+# qpm-cli --license-activate qualcomm_neural_processing_sdk
+# qpm-cli --extract qualcomm_neural_processing_sdk
+# mv /opt/qcom/aistack/qairt/2.31.0.250130
+
+# # Hexagon SDK
+# qpm-cli --license-activate HexagonSDK5.x
+# qpm-cli --install HexagonSDK5.x -y
