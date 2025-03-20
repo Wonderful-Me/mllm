@@ -43,6 +43,7 @@ export ANDROID_NDK_ROOT="/home/cc/workspace/android-ndk-r28"
 # qpm-cli --extract qualcomm_neural_processing_sdk
 # mv /opt/qcom/aistack/qairt/2.31.0.250130 ./mllm/src/backends/qnn/sdk
 # source ./mllm/src/backends/qnn/sdk/bin/envsetup.sh
+# source /home/cc/workspace/mllm/src/backends/qnn/sdk/bin/envsetup.sh
 
 # # Hexagon SDK
 # # Path: /local/mnt/workspace/Qualcomm/Hexagon_SDK/5.5.3.0

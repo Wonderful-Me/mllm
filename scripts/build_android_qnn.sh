@@ -2,10 +2,10 @@
 mkdir ../build-arm-qnn
 cd ../build-arm-qnn || exit
 
-export ANDROID_NDK="/home/cc/workspace/android-ndk-r28"
+export ANDROID_NDK_ROOT="/home/cc/workspace/android-ndk-r28"
 
 cmake .. \
--DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake \
+-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK_ROOT/build/cmake/android.toolchain.cmake \
 -DCMAKE_BUILD_TYPE=Release \
 -DANDROID_ABI="arm64-v8a" \
 -DANDROID_STL=c++_static \
@@ -14,7 +14,7 @@ cmake .. \
 -DQNN=ON \
 -DDEBUG=OFF \
 -DTEST=OFF \
--DQUANT=OFF \
+-DQUANT=ON \
 -DQNN_VALIDATE_NODE=ON \
 -DMLLM_BUILD_XNNPACK_BACKEND=OFF
 

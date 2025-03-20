@@ -1,4 +1,4 @@
-#ifdef USE_QNN
+// #ifdef USE_QNN
 #include <iostream>
 #include <csignal>
 #include <memory>
@@ -53,7 +53,8 @@ int main(int argc, char **argv) {
     cmdline::parser cmdParser;
     cmdParser.add<string>("vocab", 'v', "specify mllm tokenizer model path", false, "../vocab/qwen_vocab.mllm");
 
-    cmdParser.add<int>("limits", 'l', "max KV cache size", false, 1124);
+    cmdParser.add<int>("limits", 'l', "max KV cache size", false, 600);
+    cmdParser.add<int>("ntokens", 'n', "new tokens", false, 50);
 
     cmdParser.add<int>("thread", 't', "num of threads", false, 4);
     cmdParser.add<int>("seq", 's', "seqenth length", false, 64);
@@ -77,6 +78,7 @@ int main(int argc, char **argv) {
     int seqLength = cmdParser.get<int>("seq");
     bool isChunkExecute = cmdParser.get<bool>("chunk");
     int head_num = cmdParser.get<int>("head");
+    int ntokens = cmdParser.get<int>("ntokens");
 
     bool read_file = cmdParser.get<bool>("readfile");
 
@@ -89,7 +91,7 @@ int main(int argc, char **argv) {
     int ffn_hidden_dim = cmdParser.get<int>("ffn");
 
     vector<string> in_strs = {
-        "\"Large Language Models (LLMs) are advanced artificial intelligence systems designed to understand and generate human-like text. These models are trained on vast amounts of data, enabling them to perform a wide range of tasks, from answering questions and summarizing text to generating creative content and engaging in conversational dialogue. LLMs like GPT-3 and GPT-4, developed by OpenAI, have set new benchmarks in natural language processing by leveraging deep learning architectures, particularly transformer models, which excel at capturing context and relationships within text. The scalability and versatility of LLMs make them invaluable tools for applications in education, customer service, content creation, and more. However, their deployment also raises ethical considerations, including issues of bias, misinformation, and the potential for misuse. As the field continues to evolve, ongoing research and responsible deployment strategies are essential to harnessing the full potential of these powerful AI systems while mitigating their risks.\"\nGenerate a title based on the above text."
+        "Large Language Models (LLMs) are advanced artificial intelligence systems designed to understand and generate human-like text. These models are trained on vast amounts of data, enabling them to perform a wide range of tasks, from answering questions and summarizing text to generating creative content and engaging in conversational dialogue. LLMs like GPT-3 and GPT-4, developed by OpenAI, have set new benchmarks in natural language processing by leveraging deep learning architectures, particularly transformer models, which excel at capturing context and relationships within text. The scalability and versatility of LLMs make them invaluable tools for applications in education, customer service, content creation, and more. However, their deployment also raises ethical considerations, including issues of bias, misinformation, and the potential for misuse. As the field continues to evolve, ongoing research and responsible deployment strategies are essential to harnessing the full potential of these powerful AI systems while mitigating their risks. As LLMs continue to evolve, their applications expand across various fields. In education, they can personalize learning experiences by analyzing students' needs and progress, offering tailored recommendations and materials. In customer service, LLMs handle large volumes of inquiries, providing timely and accurate responses, thus improving customer satisfaction and operational efficiency. In content creation, LLMs assist in generating creative copy, writing articles and scripts, and even contributing to music and art production. Their powerful generative capabilities open new possibilities for the creative industries. However, this also raises discussions about copyright and originality, highlighting the need to ensure the legality and ethics of generated content. At the same time, the use of LLMs presents privacy and security challenges. Since these models rely on vast datasets, there is a risk of inadvertently exposing sensitive information or reinforcing existing biases. Ensuring data privacy and implementing robust security measures are crucial to addressing these concerns. Ethical considerations also include the potential for misuse, such as generating misinformation or deepfakes. It is essential to develop guidelines and policies that promote responsible use. As the field progresses, ongoing research and collaboration among stakeholders will be vital in balancing innovation with ethical responsibility, ensuring that LLMs are deployed in ways that benefit society while minimizing risks. The advancement of LLMs is a double-edged sword, offering immense potential for technological progress while also presenting unprecedented challenges. Generate a title for these content."
         // " What can you do?",
         // "Please introduce Beijing University of Posts and Telecommunications."};
     };
@@ -163,10 +165,25 @@ int main(int argc, char **argv) {
         std::cout << "[Q] " << input_string << std::endl;
         std::cout << "[A] " << std::flush;
 
+        auto start_time = std::chrono::high_resolution_clock::now();
+
         do {
             // 1: Prefill stage using NPU chunk execute
             npuExe.run(npu_ctx, &npuNet, {input});
             auto result = npuExe.result();
+
+            auto pend_time = std::chrono::high_resolution_clock::now();
+
+            std::chrono::duration<double> duration = pend_time - start_time;
+            double seconds = duration.count();
+
+            double tokens_per_second = real_seq_length / seconds;
+
+            std::cout << "Prefill Tokens: " << real_seq_length << std::endl;
+            std::cout << "Prefill Time taken: " << seconds << " seconds" << std::endl;
+            std::cout << "Prefill Speed: " << tokens_per_second << " tokens/s" << std::endl;
+
+            start_time = std::chrono::high_resolution_clock::now();
 
             // inter model for prefill-decode
             interExe.run(&interNet, {result[0]});
@@ -193,8 +210,14 @@ int main(int argc, char **argv) {
             decode_cpu_backend->setExecutionType(AUTOREGRESSIVE);
             decode_cpu_backend->toggleSwitching();
 
+            auto mid_time = std::chrono::high_resolution_clock::now();
+
+            duration = mid_time - start_time;
+            double inter_seconds = duration.count();
+
+            int step_cnt = 0;
             // // 2: Decoding stage using CPU execute
-            for (int step = real_seq_length; step < real_seq_length + 100; step++) {
+            for (int step = real_seq_length; step < real_seq_length + ntokens; step++) {
                 cpuExe.run(&cpuNet, {input});
                 auto result = cpuExe.result();
 
@@ -204,6 +227,7 @@ int main(int argc, char **argv) {
                 auto [isOk, print_string] = tokenizer.postprocess(out_token);
                 if (isOk) {
                     std::cout << print_string << std::flush;
+                    step_cnt++;
                 } else {
                     break;
                 }
@@ -214,6 +238,19 @@ int main(int argc, char **argv) {
                     decode_cpu_backend->toggleSwitching();
                 }
             }
+
+            auto end_time = std::chrono::high_resolution_clock::now();
+
+            duration = end_time - mid_time;
+            seconds = duration.count();
+
+            tokens_per_second = (step_cnt) / seconds;
+
+            std::cout << "\nIntermediate Time taken: " << inter_seconds << " seconds" << std::endl;
+            std::cout << "Decode Tokens: " << (step_cnt) << std::endl;
+            std::cout << "Decode Time taken: " << seconds << " seconds" << std::endl;
+            std::cout << "Decode Speed: " << tokens_per_second << " tokens/s" << std::endl;
+
         } while (false);
         printf("\n");
     }
@@ -222,7 +259,7 @@ int main(int argc, char **argv) {
     npuExe.perf();
     cpuExe.perf();
 
-    // free memory
+    // // free memory
     // for (auto *op : npu_ctx->net_ops) {
     //     delete op;
     // }
@@ -232,4 +269,4 @@ int main(int argc, char **argv) {
 
     return 0;
 }
-#endif
+// #endif

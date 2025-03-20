@@ -54,7 +54,15 @@ public:
             auto &graph = Tracer::model_[i];
             graph->Forward({}, {chunk_id});
             auto graph_end = mllm_time_us();
-            std::cout << "chunk_id: " << chunk_id << ", graphIdx: " << i << ", graph time: " << (graph_end - graph_start) / 1000.0F << "ms" << std::endl;
+            if (graph->device() == MLLM_CPU) {
+                std::cout << "chunk_id: " << chunk_id << ", CPU graphIdx: " << i << ", graph time: " << (graph_end - graph_start) / 1000.0F << "ms" << std::endl;
+            }
+            else if (graph->device() == MLLM_QNN) {
+                std::cout << "chunk_id: " << chunk_id << ", NPU graphIdx: " << i << ", graph time: " << (graph_end - graph_start) / 1000.0F << "ms" << std::endl;
+            }
+            else {
+                std::logic_error("Unsupported device type");
+            }
         };
         auto start_t = mllm_time_us();
         omp_set_max_active_levels(3);
