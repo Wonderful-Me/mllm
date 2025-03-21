@@ -7,7 +7,7 @@
 #=============================================================================
 
 # define default
-default: all
+default: all_android
 
 # define library prerequisites list
 lib_gpu := src
@@ -34,11 +34,10 @@ clean_bins:
 
 all_android: gpu_android
 
-gpu_android: gpu_aarch64-android
+gpu_android: gpu_aarch64-android rename_dirs
 
 gpu_aarch64-android: check_ndk clean_aarch64-android
 	$(call build_if_exists,$(lib_gpu),$(ANDROID_NDK_ROOT)/ndk-build APP_ALLOW_MISSING_DEPS=true APP_ABI="arm64-v8a" NDK_PROJECT_PATH=./ NDK_APPLICATION_MK=$(make_dir)/Application.mk APP_BUILD_SCRIPT=$(make_dir)/Android.mk)
-	@$(rename_target_dirs)
 
 clean_android: check_ndk
 	-$(ANDROID_NDK_ROOT)/ndk-build clean NDK_PROJECT_PATH=./ NDK_APPLICATION_MK=$(make_dir)/Application.mk APP_BUILD_SCRIPT=$(make_dir)/Android.mk
@@ -50,7 +49,15 @@ clean_aarch64-android:
 # utilities
 # Syntax: $(call build_if_exists <dir>,<cmd>)
 build_if_exists = $(if $(wildcard $(1)),$(2),$(warning WARNING: $(1) does not exist. Skipping Compilation))
-rename_target_dirs = find . -type d -execdir rename 's/arm64-v8a/aarch64-android/' '{}' \+ \
+# rename_target_dirs = find . -depth -type d -name "arm64-v8a" -execdir rename 's/arm64-v8a/aarch64-android/' '{}' \+ \
+
+rename_dirs:
+	@find . -depth -type d -name "*arm64-v8a*" | while read dir; do \
+		new_dir=$$(echo $$dir | sed 's/arm64-v8a/aarch64-android/g'); \
+		echo "mv \"$$dir\" \"$$new_dir\""; \
+		mv "$$dir" "$$new_dir"; \
+	done
+
 
 check_ndk:
 ifeq ($(ANDROID_NDK_ROOT),)
