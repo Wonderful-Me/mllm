@@ -34,11 +34,13 @@ void QNNNet::convert(Context* ctx, BackendType backend_type, int threadCount) {
         }
 
         for (auto *t : sub_param.net_tensors) {
+            // No op-conn before, be treated as a 'model input'
             if (t->in == NULL) {
                 auto *in_tensor = t;
                 tensors_[in_tensor->name] = std::make_shared<Tensor>(backends_[backend_type].get());
                 tensors_[in_tensor->name]->setName(in_tensor->name);
                 tensors_[in_tensor->name]->setDtype(in_tensor->type);
+                // store here in 'input_names_' for the QNN Net
                 input_names_.push_back(in_tensor->name);
                 inputname_graphidx_[in_tensor->name] = ii;
                 names.push_back(in_tensor->name);

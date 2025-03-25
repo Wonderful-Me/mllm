@@ -65,6 +65,8 @@ int main(int argc, char **argv) {
     cmdParser.add<int>("hds", 'd', "size of hidden size", false, 2048);
 
     cmdParser.add<bool>("readfile", 'r', "read prompt from file", false, false);
+    cmdParser.add<bool>("warmiter", 'w', "duplicate prompt from file for warmup", false, false);
+    cmdParser.add<int>("per_chunk_size", 'p', "per chunk size", false, 128);
 
     cmdParser.parse_check(argc, argv);
 
@@ -81,22 +83,18 @@ int main(int argc, char **argv) {
     int ntokens = cmdParser.get<int>("ntokens");
 
     bool read_file = cmdParser.get<bool>("readfile");
+    bool warmiter = cmdParser.get<bool>("warmiter");
+    int chunk_size = cmdParser.get<int>("per_chunk_size");
 
     int chunk = 1;
     if (isChunkExecute)
-        chunk = seqLength / 128;
+        chunk = seqLength / chunk_size;
 
     int vocab_size = 151936;
     int hidden_dim = cmdParser.get<int>("hds");
     int ffn_hidden_dim = cmdParser.get<int>("ffn");
 
-    vector<string> in_strs = {
-        "Large Language Models (LLMs) are advanced artificial intelligence systems designed to understand and generate human-like text. These models are trained on vast amounts of data, enabling them to perform a wide range of tasks, from answering questions and summarizing text to generating creative content and engaging in conversational dialogue. LLMs like GPT-3 and GPT-4, developed by OpenAI, have set new benchmarks in natural language processing by leveraging deep learning architectures, particularly transformer models, which excel at capturing context and relationships within text. The scalability and versatility of LLMs make them invaluable tools for applications in education, customer service, content creation, and more. However, their deployment also raises ethical considerations, including issues of bias, misinformation, and the potential for misuse. As the field continues to evolve, ongoing research and responsible deployment strategies are essential to harnessing the full potential of these powerful AI systems while mitigating their risks. As LLMs continue to evolve, their applications expand across various fields. In education, they can personalize learning experiences by analyzing students' needs and progress, offering tailored recommendations and materials. In customer service, LLMs handle large volumes of inquiries, providing timely and accurate responses, thus improving customer satisfaction and operational efficiency. In content creation, LLMs assist in generating creative copy, writing articles and scripts, and even contributing to music and art production. Their powerful generative capabilities open new possibilities for the creative industries. However, this also raises discussions about copyright and originality, highlighting the need to ensure the legality and ethics of generated content. At the same time, the use of LLMs presents privacy and security challenges. Since these models rely on vast datasets, there is a risk of inadvertently exposing sensitive information or reinforcing existing biases. Ensuring data privacy and implementing robust security measures are crucial to addressing these concerns. Ethical considerations also include the potential for misuse, such as generating misinformation or deepfakes. It is essential to develop guidelines and policies that promote responsible use. As the field progresses, ongoing research and collaboration among stakeholders will be vital in balancing innovation with ethical responsibility, ensuring that LLMs are deployed in ways that benefit society while minimizing risks. The advancement of LLMs is a double-edged sword, offering immense potential for technological progress while also presenting unprecedented challenges. Generate a title for these content."
-        // " What can you do?",
-        // "Please introduce Beijing University of Posts and Telecommunications."};
-    };
-
-    string input_string;
+    vector<string> in_strs;
     if (read_file) {
         std::ifstream file("./func_prompt.txt");
         if (!file) {
@@ -105,10 +103,25 @@ int main(int argc, char **argv) {
         }
         std::stringstream buffer;
         buffer << file.rdbuf();
-        input_string = buffer.str();
+        if (warmiter) {
+            in_strs = {
+                buffer.str(),
+                buffer.str()
+            };
+        }
+        else {
+            in_strs = {
+                buffer.str()
+            };        
+        }
         file.close(); // 关闭文件
-    } else {
-        input_string = in_strs[0];
+    }
+    else {
+        in_strs = {
+            "Large Language Models (LLMs) are advanced artificial intelligence systems designed to understand and generate human-like text. These models are trained on vast amounts of data, enabling them to perform a wide range of tasks, from answering questions and summarizing text to generating creative content and engaging in conversational dialogue. LLMs like GPT-3 and GPT-4, developed by OpenAI, have set new benchmarks in natural language processing by leveraging deep learning architectures, particularly transformer models, which excel at capturing context and relationships within text. The scalability and versatility of LLMs make them invaluable tools for applications in education, customer service, content creation, and more. However, their deployment also raises ethical considerations, including issues of bias, misinformation, and the potential for misuse. As the field continues to evolve, ongoing research and responsible deployment strategies are essential to harnessing the full potential of these powerful AI systems while mitigating their risks. As LLMs continue to evolve, their applications expand across various fields. In education, they can personalize learning experiences by analyzing students' needs and progress, offering tailored recommendations and materials. In customer service, LLMs handle large volumes of inquiries, providing timely and accurate responses, thus improving customer satisfaction and operational efficiency. In content creation, LLMs assist in generating creative copy, writing articles and scripts, and even contributing to music and art production. Their powerful generative capabilities open new possibilities for the creative industries. However, this also raises discussions about copyright and originality, highlighting the need to ensure the legality and ethics of generated content. At the same time, the use of LLMs presents privacy and security challenges. Since these models rely on vast datasets, there is a risk of inadvertently exposing sensitive information or reinforcing existing biases. Ensuring data privacy and implementing robust security measures are crucial to addressing these concerns. Ethical considerations also include the potential for misuse, such as generating misinformation or deepfakes. It is essential to develop guidelines and policies that promote responsible use. As the field progresses, ongoing research and collaboration among stakeholders will be vital in balancing innovation with ethical responsibility, ensuring that LLMs are deployed in ways that benefit society while minimizing risks. The advancement of LLMs is a double-edged sword, offering immense potential for technological progress while also presenting unprecedented challenges. Generate a title for these content."
+            // " What can you do?",
+            // "Please introduce Beijing University of Posts and Telecommunications."};
+        };
     }
 
     auto tokenizer = QWenTokenizer(vocab_path, merge_file_path);
@@ -139,7 +152,7 @@ int main(int argc, char **argv) {
 
     QNNExecutor *npuExePtr;
     if (isChunkExecute) {
-        npuExePtr = new QNNPipelineExecutor(&npu_prefill_param_loader);
+        npuExePtr = new QNNPipelineExecutor(&npu_prefill_param_loader, chunk_size = chunk_size);
     } else {
         npuExePtr = new QNNExecutor(&npu_prefill_param_loader);
     }
@@ -153,7 +166,7 @@ int main(int argc, char **argv) {
     shared_ptr<Tensor> input = std::make_shared<Tensor>();
 
     for (int str_i = 0; str_i < in_strs.size(); ++str_i) {
-        // auto in_str = in_strs[str_i];
+       auto input_string = in_strs[str_i];
         auto input_str = tokenizer.apply_chat_template(input_string);
         auto [real_seq_length, input_tensor] = tokenizer.tokenizeWithPadding(input_str, seqLength, vocab_size);
         auto input = std::make_shared<Tensor>(input_tensor);
