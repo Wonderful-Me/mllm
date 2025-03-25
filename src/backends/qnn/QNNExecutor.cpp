@@ -305,7 +305,7 @@ void QNNPipelineExecutor::run(Context *ctx, Net *net, vector<shared_ptr<Tensor>>
     // the last chunk if there is odd chunks
     if (chunk_num % 2 == 1) {
         for (int i = 0; i < (int)net->subGraph().size(); ++i) {
-            executeFunc(chunk_num - 1, i);
+            executeFunc(chunk_num - 1, i + chunk_num - 1);
         }
     }
 
