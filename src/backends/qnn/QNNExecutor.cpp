@@ -289,30 +289,14 @@ void QNNPipelineExecutor::run(Context *ctx, Net *net, vector<shared_ptr<Tensor>>
         }
     };
 
-//     omp_set_max_active_levels(3);
-//     // based on chunk_num, execute it every 2 chunk in pipeline
-//     for (int chunk_id = 0; chunk_id < chunk_num / 2; ++chunk_id) {
-//         // for every two chunk, start at chunk_id * 2 to avoid no execute for
-//         for (int i = chunk_id * 2; i < (int)net->subGraph().size() + chunk_id * 2 + 5; ++i) {
-// #pragma omp parallel for num_threads(2)
-//             for (int pair_idx = 0; pair_idx < 2; ++pair_idx) {
-//                 executeFunc(chunk_id * 2 + pair_idx, i - pair_idx * 4);
-//             }
-// #pragma omp barrier
-// #ifdef QNN_EXECUTE_TIME
-//             std::cout << "---------------------------" << std::endl;
-// #endif
-//         }
-//     }
-
     omp_set_max_active_levels(3);
     // based on chunk_num, execute it every 2 chunk in pipeline
     for (int chunk_id = 0; chunk_id < chunk_num / 2; ++chunk_id) {
         // for every two chunk, start at chunk_id * 2 to avoid no execute for
-        for (int i = 0; i < (int)net->subGraph().size() + 1; ++i) {
+        for (int i = chunk_id * 2; i < (int)net->subGraph().size() + chunk_id * 2 + 5; ++i) {
 #pragma omp parallel for num_threads(2)
             for (int pair_idx = 0; pair_idx < 2; ++pair_idx) {
-                executeFunc(chunk_id * 2 + pair_idx, i + chunk_id * 2);
+                executeFunc(chunk_id * 2 + pair_idx, i - pair_idx * 4);
             }
 #pragma omp barrier
 #ifdef QNN_EXECUTE_TIME
@@ -320,6 +304,22 @@ void QNNPipelineExecutor::run(Context *ctx, Net *net, vector<shared_ptr<Tensor>>
 #endif
         }
     }
+
+//     omp_set_max_active_levels(3);
+//     // based on chunk_num, execute it every 2 chunk in pipeline
+//     for (int chunk_id = 0; chunk_id < chunk_num / 2; ++chunk_id) {
+//         // for every two chunk, start at chunk_id * 2 to avoid no execute for
+//         for (int i = 0; i < (int)net->subGraph().size() + 1; ++i) {
+// #pragma omp parallel for num_threads(2)
+//             for (int pair_idx = 0; pair_idx < 2; ++pair_idx) {
+//                 executeFunc(chunk_id * 2 + pair_idx, i + chunk_id * 2);
+//             }
+// #pragma omp barrier
+// #ifdef QNN_EXECUTE_TIME
+//             std::cout << "---------------------------" << std::endl;
+// #endif
+//         }
+//     }
 
     // the last chunk if there is odd chunks
     if (chunk_num % 2 == 1) {

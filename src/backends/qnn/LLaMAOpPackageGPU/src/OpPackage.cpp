@@ -13,6 +13,7 @@
 #include "OpPackage.hpp"
 #include "QnnSdkBuildId.h"
 #include "ReluOperation.hpp"
+#include "NormOperation.hpp"
 
 std::unique_ptr<OpPackage> OpPackage::create(const std::string& packageName,
                                              const QnnGpu_DeviceProperties_t* deviceProperties) {
@@ -29,7 +30,9 @@ OpPackage::OpPackage(const std::string& packageName,
                      const QnnGpu_DeviceProperties_t* deviceProperties)
     : m_packageName(packageName) {
   m_opBuilders[ReluOperation::s_operationType] = ReluOperation::create;
+  m_opBuilders[NormOperation::s_operationType] = NormOperation::create;
   m_opNames.push_back(ReluOperation::s_operationType.c_str());
+  m_opNames.push_back(NormOperation::s_operationType.c_str());
 
   m_sdkApiVersion = QNN_GPU_API_VERSION_INIT;
   m_packageInfo   = {m_packageName.c_str(),       // packageName
